@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -62,7 +63,7 @@ app.get('/todos/:id', (req, res) => {
 				}
 			},
 			(err) => {
-				console.log("Error while getting a todo", JSON.stringify(todos, undefined, 4));
+				console.log("Error while getting a todo", JSON.stringify(todo, undefined, 4));
 				res.status(400).send();
 			}).catch((e) => {
 			res.status(400).send();
@@ -87,9 +88,47 @@ app.delete('/todos/:id', (req, res) => {
 				}
 			},
 			(err) => {
-				console.log("Error while removing a todo", JSON.stringify(todos, undefined, 4));
+				console.log("Error while removing a todo", JSON.stringify(todo, undefined, 4));
 				res.status(400).send();
 			}).catch((e) => {
+			res.status(400).send();
+		});
+	} else {
+		return res.status(404).send();
+	}
+});
+
+app.patch('/todos/:id', (req, res) => {
+	var id = req.params.id;
+	var body = _.pick(req.body, ['text', 'completed']);
+
+	if (ObjectID.isValid(id)) {
+
+		if (_.isBoolean(body.completed) && body.completed) {
+			body.completedAt = new Date().getTime();
+		} else {
+			body.completed = false;
+			body.completedAt = null;
+		}
+
+		Todo.findByIdAndUpdate(id, {
+			$set: body
+		}, {
+			new: true
+		}).then((todo) => {
+
+			if (todo) {
+				res.send({
+					todo
+				});
+			} else {
+				res.status(404).send();
+			}
+
+		}, (err) => {
+			console.log("Error while updating a todo", JSON.stringify(todo, undefined, 4));
+			res.status(400).send();
+		}).catch((e) => {
 			res.status(400).send();
 		});
 	} else {
