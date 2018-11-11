@@ -136,20 +136,20 @@ app.patch('/todos/:id', (req, res) => {
 	}
 });
 
-// app.post('/users', (req, res) => {
-// 	console.log(req.body);
-//
-// 	var todo = new User(req.body);
-//
-// 	todo.save().then((doc) => {
-//
-// 		console.log('User added successfully.', JSON.stringify(doc, undefined, 4));
-// 		res.send(doc);
-// 	}, (err) => {
-// 		console.log('Error occurred while adding a User.', err);
-// 		res.status(400).send(err);
-// 	});
-//});
+app.post('/users', (req, res) => {
+
+	var body = _.pick(req.body, ['email', 'password']);
+	var user = new User(body);
+
+	user.save().then((user) => {
+		return user.generateAuthToken();
+	}).then((token) => {
+		res.header('x-auth', token).send(user);
+		console.log('User added successfully.', JSON.stringify(user, undefined, 4));
+	}).catch((e) => {
+		res.status(400).send(e);
+	});
+});
 
 app.listen(3000, () => {
 	console.log('Server is running on port 3000.');
