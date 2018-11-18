@@ -37,7 +37,7 @@ UserSchema.methods.toJSON = function() {
 	var user = this;
 	var userObj = user.toObject();
 
-	return _.pick(userObj, ['email', '_id']);
+	return _.pick(userObj, ['_id', 'email']);
 }
 
 UserSchema.statics.findByToken = function(token) {
@@ -46,6 +46,38 @@ UserSchema.statics.findByToken = function(token) {
 
 	try {
 		decoded = jwt.verify(token, 'userAuth');
+	} catch (e) {
+		return Promise.reject();
+	}
+
+	return User.findOne({
+		_id: decoded._id,
+		'tokens.token': token,
+		'tokens.access': 'auth'
+	});
+};
+
+UserSchema.statics.findByCredentials = function(email, password) {
+	var User = this;
+
+	try {
+		return User.findOne({
+			email
+		}).then((user) => {
+			if (user) {
+				return new Promise((resolve, reject) => {
+					bcryptjs.compare(password, user.password, (err, res) => {
+						if (res) {
+							resolve(user);
+						} else {
+							reject();
+						}
+					});
+				});
+			} else {
+				return Promise.reject();
+			}
+		});
 	} catch (e) {
 		return Promise.reject();
 	}
@@ -73,6 +105,18 @@ UserSchema.methods.generateAuthToken = function() {
 
 	return user.save().then(() => {
 		return token;
+	});
+};
+
+UserSchema.methods.removeToken = function(token) {
+	var user = this;
+
+	return user.update({
+		$pull: {
+			tokens: {
+				token
+			}
+		}
 	});
 };
 
