@@ -25,13 +25,15 @@ const {
 var app = express();
 app.use(bodyParser.json());
 
-app.post('/todos', (req, res) => {
-	console.log(req.body);
+app.post('/todos', authenticate, (req, res) => {
+	//console.log(req.body);
 
-	var todo = new Todo(req.body);
+	var todo = new Todo({
+		text: req.body.text,
+		createdBy: req.user._id
+	});
 
 	todo.save().then((doc) => {
-
 		console.log('Record added successfully.', JSON.stringify(doc, undefined, 4));
 		res.send(doc);
 	}, (err) => {
@@ -40,8 +42,10 @@ app.post('/todos', (req, res) => {
 	});
 });
 
-app.get('/todos', (req, res) => {
-	Todo.find().then((todos) => {
+app.get('/todos', authenticate, (req, res) => {
+	Todo.find({
+		createdBy: req.user._id
+	}).then((todos) => {
 			res.send({
 				todos
 			});
@@ -52,12 +56,14 @@ app.get('/todos', (req, res) => {
 		});
 });
 
-app.get('/todos/:id', (req, res) => {
-
+app.get('/todos/:id', authenticate, (req, res) => {
 	var id = req.params.id;
 
 	if (ObjectID.isValid(id)) {
-		Todo.findById(id).then((todo) => {
+		Todo.findOne({
+			_id: id,
+			createdBy: req.user._id
+		}).then((todo) => {
 				if (todo) {
 					res.send({
 						todo
@@ -77,12 +83,15 @@ app.get('/todos/:id', (req, res) => {
 	}
 });
 
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
 
 	var id = req.params.id;
 
 	if (ObjectID.isValid(id)) {
-		Todo.findByIdAndRemove(id).then((todo) => {
+		Todo.findOneAndRemove({
+			_id: id,
+			createdBy: req.user._id
+		}).then((todo) => {
 				if (todo) {
 					res.send({
 						todo
@@ -102,7 +111,7 @@ app.delete('/todos/:id', (req, res) => {
 	}
 });
 
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', authenticate, (req, res) => {
 	var id = req.params.id;
 	var body = _.pick(req.body, ['text', 'completed']);
 
@@ -115,7 +124,10 @@ app.patch('/todos/:id', (req, res) => {
 			body.completedAt = null;
 		}
 
-		Todo.findByIdAndUpdate(id, {
+		Todo.findOneAndUpdate({
+			_id: id,
+			createdBy: req.user._id
+		}, {
 			$set: body
 		}, {
 			new: true
@@ -128,7 +140,6 @@ app.patch('/todos/:id', (req, res) => {
 			} else {
 				res.status(404).send();
 			}
-
 		}, (err) => {
 			console.log("Error while updating a todo", JSON.stringify(todo, undefined, 4));
 			res.status(400).send();
